@@ -1,0 +1,15 @@
+name: Update LP
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel update endpoint
+        run: |
+          curl -fsS -X POST "${{ secrets.VERCEL_APP_URL }}/api/cron/update-lp" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
