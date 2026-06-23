@@ -48,7 +48,14 @@ Open [http://localhost:3000](http://localhost:3000).
 Trigger the update job manually (needs env vars configured):
 
 ```bash
-curl -X POST http://localhost:3000/api/cron/update-lp \
+curl -fsS -X POST https://fhleaderboard.vercel.app/api/cron/update-lp \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+For local dev:
+
+```bash
+curl -fsS -X POST http://localhost:3000/api/cron/update-lp \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -63,16 +70,36 @@ This fetches all player ranks from Riot and saves a snapshot to Supabase.
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `CRON_SECRET`
+   - `ADMIN_SECRET` (for `/admin` and suggestions review)
 4. Deploy
 
-Vercel Cron in [`vercel.json`](./vercel.json) is set to once daily (Hobby plan limit). LP updates run every **30 minutes** via [`.github/workflows/update-lp.yml`](./.github/workflows/update-lp.yml).
+Vercel Cron in [`vercel.json`](./vercel.json) is set to once daily (Hobby plan limit). LP updates can run every **15 minutes** via GitHub Actions, your own server cron, or both (pick one).
 
-### GitHub Actions cron (recommended)
+### GitHub Actions cron
 
 1. Add GitHub repo secrets:
-   - `VERCEL_APP_URL` — e.g. `https://your-app.vercel.app`
+   - `VERCEL_APP_URL` — `https://fhleaderboard.vercel.app`
    - `CRON_SECRET` — same value as in Vercel
-2. The workflow calls your update endpoint every 30 minutes (`*/30 * * * *`, UTC)
+2. The workflow calls your update endpoint every 15 minutes (`*/15 * * * *`, UTC)
+
+### Ubuntu server cron
+
+1. Copy [`scripts/update-lp-cron.sh`](./scripts/update-lp-cron.sh) to your server and `chmod +x` it.
+2. Test once:
+
+```bash
+CRON_SECRET='YOUR_CRON_SECRET' ./scripts/update-lp-cron.sh
+```
+
+3. Add to crontab (`crontab -e`):
+
+```cron
+*/15 * * * * CRON_SECRET='YOUR_CRON_SECRET' /path/to/update-lp-cron.sh >> /var/log/fhleaderboard-update.log 2>&1
+```
+
+Optional: override the app URL with `APP_URL=https://fhleaderboard.vercel.app`.
+
+Disable [`.github/workflows/update-lp.yml`](./.github/workflows/update-lp.yml) if you use server cron only, so snapshots are not fetched twice.
 
 ## How scoring works
 

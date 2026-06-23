@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       tagLine?: string;
       displayName?: string;
       role?: string;
-      suggestionType?: "add" | "replace" | "change_role" | "set_active_roster";
+      suggestionType?: "add" | "replace" | "change_role" | "set_active_roster" | "remove";
       replacesGameName?: string;
       replacesTagLine?: string;
       activePlayers?: { gameName: string; tagLine: string }[];

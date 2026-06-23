@@ -119,7 +119,9 @@ function SuggestionCard({
                 ? `Replace ${suggestion.replacesGameName}#${suggestion.replacesTagLine}`
                 : suggestion.suggestionType === "change_role"
                   ? `Change role to ${suggestion.role ?? "—"}`
-                  : "Set active roster"}
+                  : suggestion.suggestionType === "remove"
+                    ? "Remove player"
+                    : "Set active roster"}
           </dd>
         </div>
         {!isActiveRosterSuggestion ? (

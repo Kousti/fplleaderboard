@@ -30,8 +30,8 @@ export function getSchemaMigrationHint(message: string): string | null {
     return "Run supabase/add_profile_icon_id.sql in your Supabase SQL Editor.";
   }
 
-  if (lower.includes("set_active_roster") || (lower.includes("suggestion_type") && lower.includes("check"))) {
-    return "Run supabase/add_set_active_roster_suggestion.sql and supabase/add_change_role_suggestion.sql in your Supabase SQL Editor.";
+  if (lower.includes("set_active_roster") || lower.includes("'remove'") || (lower.includes("suggestion_type") && lower.includes("check"))) {
+    return "Run supabase/add_set_active_roster_suggestion.sql and supabase/add_remove_player_suggestion.sql in your Supabase SQL Editor.";
   }
 
   if (isMissingRelation(message)) {

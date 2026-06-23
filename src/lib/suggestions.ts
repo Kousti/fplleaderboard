@@ -3,6 +3,7 @@ import {
   addPlayerToRoster,
   ensureTeamRosterInitialized,
   replacePlayerOnRoster,
+  removePlayerFromRoster,
   setActiveRoster,
   updatePlayerRoleOnRoster,
 } from "@/lib/roster";
@@ -14,7 +15,7 @@ import { getResolvedTeamPlayers } from "@/lib/roster";
 import { getTeamById, TEAMS, type Player } from "@/lib/teams";
 import { getSchemaMigrationHint, isMissingRosterTable } from "@/lib/schema-errors";
 
-export type SuggestionType = "add" | "replace" | "change_role" | "set_active_roster";
+export type SuggestionType = "add" | "replace" | "change_role" | "set_active_roster" | "remove";
 export type SuggestionStatus = "pending" | "approved" | "rejected";
 
 export interface ActiveRosterPlayer {
@@ -213,7 +214,8 @@ export async function createSuggestion(input: CreateSuggestionInput): Promise<Pl
     suggestionType !== "add" &&
     suggestionType !== "replace" &&
     suggestionType !== "change_role" &&
-    suggestionType !== "set_active_roster"
+    suggestionType !== "set_active_roster" &&
+    suggestionType !== "remove"
   ) {
     throw new Error("Invalid suggestion type");
   }
@@ -299,7 +301,7 @@ export async function createSuggestion(input: CreateSuggestionInput): Promise<Pl
 
   const roster = await getResolvedTeamPlayers(teamId);
 
-  if (suggestionType === "change_role") {
+  if (suggestionType === "change_role" || suggestionType === "remove") {
     const onRoster = roster.find(
       (player) => player.gameName === gameName && player.tagLine === tagLine
     );
@@ -309,11 +311,52 @@ export async function createSuggestion(input: CreateSuggestionInput): Promise<Pl
   }
 
   let resolvedDisplayName = displayName;
-  if (suggestionType === "change_role") {
+  let resolvedRole = role;
+  if (suggestionType === "change_role" || suggestionType === "remove") {
     const onRoster = roster.find(
       (player) => player.gameName === gameName && player.tagLine === tagLine
     );
-    resolvedDisplayName = onRoster ? playerDisplayName(onRoster) : gameName;
+    if (onRoster) {
+      resolvedDisplayName = playerDisplayName(onRoster);
+      if (suggestionType === "remove") {
+        resolvedRole = normalizeRole(onRoster.role ?? null);
+      }
+    }
+  }
+
+  if (suggestionType === "remove") {
+    await assertNoDuplicateSuggestion(teamId, suggestionType, gameName, tagLine);
+
+    const player: Player = { gameName, tagLine };
+    const rankResult = await fetchPlayerRank(player);
+
+    const { data, error } = await supabase
+      .from("player_suggestions")
+      .insert({
+        team_id: teamId,
+        game_name: gameName,
+        tag_line: tagLine,
+        display_name: resolvedDisplayName,
+        role: resolvedRole,
+        suggestion_type: suggestionType,
+        submitter_note: submitterNote,
+        preview_tier: rankResult.ranked?.tier ?? null,
+        preview_rank: rankResult.ranked?.rank ?? null,
+        preview_league_points: rankResult.ranked?.leaguePoints ?? null,
+        profile_icon_id: rankResult.profileIconId,
+      })
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      const hint = error ? getSchemaMigrationHint(error.message) : null;
+      if (hint) {
+        throw new Error(hint);
+      }
+      throw new Error(error?.message ?? "Failed to save suggestion");
+    }
+
+    return mapSuggestion(data as SuggestionRow);
   }
 
   await assertNoDuplicateSuggestion(teamId, suggestionType, gameName, tagLine);
@@ -469,7 +512,7 @@ export async function reviewSuggestion(
         },
         newPlayer
       );
-    } else {
+    } else if (suggestion.suggestionType === "change_role") {
       await updatePlayerRoleOnRoster(
         suggestion.teamId,
         {
@@ -478,6 +521,11 @@ export async function reviewSuggestion(
         },
         suggestion.role
       );
+    } else if (suggestion.suggestionType === "remove") {
+      await removePlayerFromRoster(suggestion.teamId, {
+        gameName: suggestion.gameName,
+        tagLine: suggestion.tagLine,
+      });
     }
   }
 

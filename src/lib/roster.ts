@@ -204,6 +204,29 @@ export async function updatePlayerRoleOnRoster(
   }
 }
 
+export async function removePlayerFromRoster(
+  teamId: string,
+  player: Pick<Player, "gameName" | "tagLine">
+): Promise<void> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from("team_roster")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("game_name", player.gameName)
+    .eq("tag_line", player.tagLine)
+    .select("id");
+
+  if (error) {
+    throwSchemaError(error.message);
+  }
+
+  if (!data?.length) {
+    throw new Error("Player was not found on the roster");
+  }
+}
+
 export async function setActiveRoster(
   teamId: string,
   activePlayers: Pick<Player, "gameName" | "tagLine">[]

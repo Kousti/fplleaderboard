@@ -68,8 +68,10 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
   );
 
   const isRoleChange = suggestionType === "change_role";
+  const isRemove = suggestionType === "remove";
   const isReplace = suggestionType === "replace";
   const isSetActiveRoster = suggestionType === "set_active_roster";
+  const isRosterPlayerSelect = isRoleChange || isRemove;
 
   function handleTeamChange(nextTeamId: string) {
     setTeamId(nextTeamId);
@@ -143,8 +145,8 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
             teamId,
             gameName,
             tagLine,
-            displayName: isRoleChange ? null : displayName || null,
-            role: role || null,
+            displayName: isRoleChange || isRemove ? null : displayName || null,
+            role: isRemove ? null : role || null,
             suggestionType,
             replacesGameName: isReplace ? replacesGameName : null,
             replacesTagLine: isReplace ? replacesTagLine : null,
@@ -236,6 +238,16 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
             <input
               type="radio"
               name="suggestionType"
+              value="remove"
+              checked={suggestionType === "remove"}
+              onChange={() => handleSuggestionTypeChange("remove")}
+            />
+            Remove player
+          </label>
+          <label className="form-radio">
+            <input
+              type="radio"
+              name="suggestionType"
               value="set_active_roster"
               checked={suggestionType === "set_active_roster"}
               onChange={() => handleSuggestionTypeChange("set_active_roster")}
@@ -309,11 +321,11 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
         </div>
       ) : null}
 
-      {isRoleChange ? (
+      {isRosterPlayerSelect ? (
         <div className="form-field">
-          <label htmlFor="roleChangePlayer">Player</label>
+          <label htmlFor="rosterPlayer">{isRemove ? "Remove who?" : "Player"}</label>
           <select
-            id="roleChangePlayer"
+            id="rosterPlayer"
             value={`${gameName}#${tagLine}`}
             onChange={(event) => handlePlayerSelect(event.target.value)}
             required
@@ -331,7 +343,7 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
         </div>
       ) : null}
 
-      {!isRoleChange && !isSetActiveRoster ? (
+      {!isRosterPlayerSelect && !isSetActiveRoster ? (
         <div className="form-row">
           <div className="form-field">
             <label htmlFor="gameName">Game name</label>
@@ -358,7 +370,7 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
         </div>
       ) : null}
 
-      {!isRoleChange && !isSetActiveRoster ? (
+      {!isRosterPlayerSelect && !isSetActiveRoster ? (
         <div className="form-field">
           <label htmlFor="displayName">Display name (optional)</label>
           <input
@@ -371,7 +383,7 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
         </div>
       ) : null}
 
-      {!isSetActiveRoster ? (
+      {!isSetActiveRoster && !isRemove ? (
         <div className="form-field">
           <label htmlFor="role">{isRoleChange ? "New role" : "Role (optional)"}</label>
           <select
@@ -399,9 +411,11 @@ export function SuggestionForm({ teams }: SuggestionFormProps) {
           placeholder={
             isSetActiveRoster
               ? "Why should this be the active roster?"
-              : isRoleChange
-                ? "Why should this player's role be updated?"
-                : "Why should this account be on the roster?"
+              : isRemove
+                ? "Why should this player be removed from the roster?"
+                : isRoleChange
+                  ? "Why should this player's role be updated?"
+                  : "Why should this account be on the roster?"
           }
           rows={3}
           maxLength={500}

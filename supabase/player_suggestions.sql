@@ -8,7 +8,7 @@ create table if not exists player_suggestions (
   tag_line text not null,
   display_name text,
   role text check (role is null or role in ('Top', 'Jungle', 'Mid', 'ADC', 'Support')),
-  suggestion_type text not null check (suggestion_type in ('add', 'replace', 'change_role', 'set_active_roster')),
+  suggestion_type text not null check (suggestion_type in ('add', 'replace', 'change_role', 'set_active_roster', 'remove')),
   replaces_game_name text,
   replaces_tag_line text,
   active_roster jsonb,
