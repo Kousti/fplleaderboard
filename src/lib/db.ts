@@ -10,6 +10,7 @@ import {
   resolveMoverWeek,
   type MoverPeriod,
 } from "@/lib/daily-movers";
+import { normalizeRole, type PlayerRole } from "@/lib/roles";
 
 export interface SnapshotRow {
   id: string;
@@ -32,6 +33,9 @@ export interface PlayerResultRow {
   team_id: string;
   game_name: string;
   tag_line: string;
+  display_name: string | null;
+  role: string | null;
+  is_active: boolean;
   tier: string | null;
   rank: string | null;
   league_points: number | null;
@@ -52,6 +56,9 @@ export interface TeamLeaderboardEntry {
   players: {
     gameName: string;
     tagLine: string;
+    displayName: string;
+    role: PlayerRole | null;
+    isActive: boolean;
     tier: string | null;
     rank: string | null;
     leaguePoints: number | null;
@@ -82,6 +89,9 @@ export interface HistoryPoint {
 export interface PlayerDailyChange {
   gameName: string;
   tagLine: string;
+  displayName: string;
+  role: PlayerRole | null;
+  isActive: boolean;
   teamId: string;
   profileIconId: number | null;
   tier: string | null;
@@ -115,7 +125,7 @@ export interface DailyMoversPayload {
 
 let supabaseClient: SupabaseClient | null = null;
 
-function getSupabase(): SupabaseClient {
+export function getSupabase(): SupabaseClient {
   if (supabaseClient) {
     return supabaseClient;
   }
@@ -172,6 +182,9 @@ export async function saveSnapshot(
       team_id: team.teamId,
       game_name: player.gameName,
       tag_line: player.tagLine,
+      display_name: player.displayName,
+      role: player.role,
+      is_active: player.isActive,
       tier: player.tier,
       rank: player.rank,
       league_points: player.leaguePoints,
@@ -258,6 +271,9 @@ async function getSnapshotById(snapshotId: string): Promise<LeaderboardSnapshot 
       players: (playersByTeam.get(team.team_id) ?? []).map((player) => ({
         gameName: player.game_name,
         tagLine: player.tag_line,
+        displayName: player.display_name ?? player.game_name,
+        role: normalizeRole(player.role),
+        isActive: player.is_active ?? true,
         tier: player.tier,
         rank: player.rank,
         leaguePoints: player.league_points,

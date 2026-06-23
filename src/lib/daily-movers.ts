@@ -1,4 +1,5 @@
 import type { DailyPlayerMovers, PlayerDailyChange, PlayerResultRow } from "@/lib/db";
+import { normalizeRole } from "@/lib/roles";
 import {
   formatHelsinkiDayKey,
   getCurrentHelsinkiDayKey,
@@ -24,6 +25,8 @@ function mapPlayerRow(row: PlayerResultRow) {
   return {
     gameName: row.game_name,
     tagLine: row.tag_line,
+    displayName: row.display_name ?? row.game_name,
+    role: normalizeRole(row.role),
     teamId: row.team_id,
     profileIconId: row.profile_icon_id,
     tier: row.tier,
@@ -177,6 +180,9 @@ export function buildPlayerChanges(
     changes.push({
       gameName: row.game_name,
       tagLine: row.tag_line,
+      displayName: row.display_name ?? row.game_name,
+      role: normalizeRole(row.role),
+      isActive: row.is_active ?? true,
       teamId: row.team_id,
       profileIconId: row.profile_icon_id,
       tier: row.tier,

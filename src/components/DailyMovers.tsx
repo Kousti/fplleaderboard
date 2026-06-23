@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { OpggRankCell } from "@/components/OpggRankCell";
+import { PlayerNameDisplay } from "@/components/PlayerNameDisplay";
+import { PlayerRoleBadge } from "@/components/PlayerRoleBadge";
 import { ProfileIcon } from "@/components/ProfileIcon";
 import type { MoverPeriod } from "@/lib/daily-movers";
 import type { DailyMoversPayload, DailyPlayerMovers, PlayerDailyChange } from "@/lib/db";
@@ -32,10 +34,14 @@ function DailyMoverRow({
 
       <div className="mover-main">
         <div className="mover-name-line">
-          <span className="opgg-player-name">
-            {entry.gameName}
-            <span className="opgg-player-tag">#{entry.tagLine}</span>
-          </span>
+          <div className="opgg-player-line">
+            <PlayerNameDisplay
+              displayName={entry.displayName}
+              gameName={entry.gameName}
+              tagLine={entry.tagLine}
+            />
+            <PlayerRoleBadge role={entry.role} />
+          </div>
         </div>
 
         <div className="mover-meta">

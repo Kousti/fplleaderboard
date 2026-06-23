@@ -1,8 +1,13 @@
 import { LeaderboardTabs } from "@/components/LeaderboardTabs";
 
+import type { PlayerRole } from "@/lib/roles";
+
 export interface LeaderboardPlayer {
   gameName: string;
   tagLine: string;
+  displayName: string;
+  role: PlayerRole | null;
+  isActive: boolean;
   tier: string | null;
   rank: string | null;
   leaguePoints: number | null;

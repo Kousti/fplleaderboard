@@ -1,6 +1,12 @@
+import type { PlayerRole } from "@/lib/roles";
+import { TEAM_ROSTER_LIMIT } from "@/lib/rank";
+
 export interface Player {
   gameName: string;
   tagLine: string;
+  displayName?: string;
+  role?: PlayerRole | null;
+  isActive?: boolean;
 }
 
 export interface Team {
@@ -146,7 +152,7 @@ export const TEAMS: Team[] = [
       { gameName: "tobbe", tagLine: "jorgo" },
       { gameName: "baum", tagLine: "EUW2" },
       { gameName: "puuhamies", tagLine: "EUW" },
-      { gameName: "Iamb", tagLine: "EUW" },
+      { gameName: "Iamb", tagLine: "EUW", isActive: false },
     ],
   },
   {
@@ -168,4 +174,19 @@ export const TEAMS: Team[] = [
 
 export function getTeamById(id: string): Team | undefined {
   return TEAMS.find((team) => team.id === id);
+}
+
+export function resolvePlayerActive(player: Player, index: number, rosterSize: number): boolean {
+  if (player.isActive !== undefined) {
+    return player.isActive;
+  }
+
+  return rosterSize <= TEAM_ROSTER_LIMIT || index < TEAM_ROSTER_LIMIT;
+}
+
+export function withResolvedActiveFlags(players: Player[]): Player[] {
+  return players.map((player, index) => ({
+    ...player,
+    isActive: resolvePlayerActive(player, index, players.length),
+  }));
 }

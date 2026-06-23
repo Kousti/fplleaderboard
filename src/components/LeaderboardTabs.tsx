@@ -4,9 +4,13 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { buildIndividualLeaderboard } from "@/lib/leaderboard-data";
 import { placementTier } from "@/lib/rank";
+import { PLAYER_ROLES, type PlayerRole } from "@/lib/roles";
 import { type LeaderboardTeam } from "@/components/Leaderboard";
 import { OpggRankCell } from "@/components/OpggRankCell";
+import { PlayerNameDisplay } from "@/components/PlayerNameDisplay";
+import { PlayerRoleBadge } from "@/components/PlayerRoleBadge";
 import { ProfileIcon } from "@/components/ProfileIcon";
+import { RosterStatusBadge } from "@/components/RosterStatusBadge";
 import { WinratePills } from "@/components/WinratePills";
 
 type Tab = "teams" | "players";
@@ -19,14 +23,15 @@ export function LeaderboardTabs({ teams }: LeaderboardTabsProps) {
   const [tab, setTab] = useState<Tab>("teams");
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [playerTeamFilter, setPlayerTeamFilter] = useState<string>("all");
+  const [playerRoleFilter, setPlayerRoleFilter] = useState<string>("all");
 
   const players = useMemo(
     () =>
-      buildIndividualLeaderboard(
-        teams,
-        playerTeamFilter === "all" ? null : playerTeamFilter
-      ),
-    [teams, playerTeamFilter]
+      buildIndividualLeaderboard(teams, {
+        teamId: playerTeamFilter === "all" ? null : playerTeamFilter,
+        role: playerRoleFilter === "all" ? null : (playerRoleFilter as PlayerRole),
+      }),
+    [teams, playerTeamFilter, playerRoleFilter]
   );
   const showTeamOnPlayer = playerTeamFilter === "all";
 
@@ -59,21 +64,38 @@ export function LeaderboardTabs({ teams }: LeaderboardTabsProps) {
         </div>
         <div className="opgg-toolbar-actions">
           {tab === "players" ? (
-            <label className="opgg-team-filter">
-              <span className="opgg-team-filter-label">Team</span>
-              <select
-                className="opgg-team-filter-select"
-                value={playerTeamFilter}
-                onChange={(event) => setPlayerTeamFilter(event.target.value)}
-              >
-                <option value="all">All players</option>
-                {teams.map((team) => (
-                  <option key={team.teamId} value={team.teamId}>
-                    {team.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label className="opgg-team-filter">
+                <span className="opgg-team-filter-label">Team</span>
+                <select
+                  className="opgg-team-filter-select"
+                  value={playerTeamFilter}
+                  onChange={(event) => setPlayerTeamFilter(event.target.value)}
+                >
+                  <option value="all">All players</option>
+                  {teams.map((team) => (
+                    <option key={team.teamId} value={team.teamId}>
+                      {team.fullName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="opgg-team-filter">
+                <span className="opgg-team-filter-label">Role</span>
+                <select
+                  className="opgg-team-filter-select"
+                  value={playerRoleFilter}
+                  onChange={(event) => setPlayerRoleFilter(event.target.value)}
+                >
+                  <option value="all">All roles</option>
+                  {PLAYER_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           ) : null}
           <span className="opgg-mode-badge">Solo / Duo</span>
         </div>
@@ -92,17 +114,22 @@ export function LeaderboardTabs({ teams }: LeaderboardTabsProps) {
               <div
                 className="opgg-table-row"
                 data-rank={player.position}
-                key={`${player.gameName}#${player.tagLine}`}
+                key={`${player.teamId}#${player.gameName}#${player.tagLine}`}
               >
                 <span className="opgg-rank-num">{player.position}</span>
 
                 <div className="opgg-entity">
                   <ProfileIcon profileIconId={player.profileIconId} />
                   <div className="opgg-entity-text">
-                    <span className="opgg-player-name">
-                      {player.gameName}
-                      <span className="opgg-player-tag">#{player.tagLine}</span>
-                    </span>
+                    <div className="opgg-player-line">
+                      <PlayerNameDisplay
+                        displayName={player.displayName}
+                        gameName={player.gameName}
+                        tagLine={player.tagLine}
+                      />
+                      <PlayerRoleBadge role={player.role} />
+                      <RosterStatusBadge isActive={player.isActive} />
+                    </div>
                     {showTeamOnPlayer ? (
                       <span className="opgg-team-line">
                         {player.teamLogoUrl ? (
@@ -139,8 +166,10 @@ export function LeaderboardTabs({ teams }: LeaderboardTabsProps) {
             ))
           : teams.map((team) => {
               const expanded = expandedTeamId === team.teamId;
-              const teamWins = team.players.reduce((sum, p) => sum + (p.wins ?? 0), 0);
-              const teamLosses = team.players.reduce((sum, p) => sum + (p.losses ?? 0), 0);
+              const activePlayers = team.players.filter((player) => player.isActive);
+              const benchPlayers = team.players.filter((player) => !player.isActive);
+              const teamWins = activePlayers.reduce((sum, p) => sum + (p.wins ?? 0), 0);
+              const teamLosses = activePlayers.reduce((sum, p) => sum + (p.losses ?? 0), 0);
 
               return (
                 <div className="opgg-team-group" key={team.teamId}>
@@ -189,42 +218,95 @@ export function LeaderboardTabs({ teams }: LeaderboardTabsProps) {
 
                   {expanded ? (
                     <div className="opgg-roster">
-                      {team.players.map((player) => (
-                          <div
-                            className="opgg-table-row opgg-table-row--nested"
-                            key={`${player.gameName}#${player.tagLine}`}
-                          >
-                            <span className="opgg-rank-num opgg-rank-num--nested">·</span>
+                      <div className="opgg-roster-section-label">Active roster</div>
+                      {activePlayers.map((player) => (
+                        <div
+                          className="opgg-table-row opgg-table-row--nested"
+                          key={`${team.teamId}#${player.gameName}#${player.tagLine}`}
+                        >
+                          <span className="opgg-rank-num opgg-rank-num--nested">·</span>
 
-                            <div className="opgg-entity">
-                              <ProfileIcon profileIconId={player.profileIconId} size={36} />
-                              <div className="opgg-entity-text">
-                                <span className="opgg-player-name opgg-player-name--sm">
-                                  {player.gameName}
-                                  <span className="opgg-player-tag">
-                                    #{player.tagLine}
-                                  </span>
-                                </span>
+                          <div className="opgg-entity">
+                            <ProfileIcon profileIconId={player.profileIconId} size={36} />
+                            <div className="opgg-entity-text">
+                              <div className="opgg-player-line">
+                                <PlayerNameDisplay
+                                  displayName={player.displayName}
+                                  gameName={player.gameName}
+                                  tagLine={player.tagLine}
+                                  small
+                                />
+                                <PlayerRoleBadge role={player.role} small />
+                                <RosterStatusBadge isActive={player.isActive} />
                               </div>
                             </div>
-
-                            <div className="opgg-cell-rank">
-                              {player.error ? (
-                                <span className="player-error">{player.error}</span>
-                              ) : (
-                                <OpggRankCell
-                                  tier={player.tier}
-                                  rank={player.rank}
-                                  leaguePoints={player.leaguePoints}
-                                />
-                              )}
-                            </div>
-
-                            <div className="opgg-cell-winrate">
-                              <WinratePills wins={player.wins} losses={player.losses} />
-                            </div>
                           </div>
-                        ))}
+
+                          <div className="opgg-cell-rank">
+                            {player.error ? (
+                              <span className="player-error">{player.error}</span>
+                            ) : (
+                              <OpggRankCell
+                                tier={player.tier}
+                                rank={player.rank}
+                                leaguePoints={player.leaguePoints}
+                              />
+                            )}
+                          </div>
+
+                          <div className="opgg-cell-winrate">
+                            <WinratePills wins={player.wins} losses={player.losses} />
+                          </div>
+                        </div>
+                      ))}
+
+                      {benchPlayers.length > 0 ? (
+                        <>
+                          <div className="opgg-roster-section-label opgg-roster-section-label--substitutes">
+                            Substitutes
+                          </div>
+                          {benchPlayers.map((player) => (
+                            <div
+                              className="opgg-table-row opgg-table-row--nested opgg-table-row--bench"
+                              key={`${team.teamId}#${player.gameName}#${player.tagLine}`}
+                            >
+                              <span className="opgg-rank-num opgg-rank-num--nested">·</span>
+
+                              <div className="opgg-entity">
+                                <ProfileIcon profileIconId={player.profileIconId} size={36} />
+                                <div className="opgg-entity-text">
+                                  <div className="opgg-player-line">
+                                    <PlayerNameDisplay
+                                      displayName={player.displayName}
+                                      gameName={player.gameName}
+                                      tagLine={player.tagLine}
+                                      small
+                                    />
+                                    <PlayerRoleBadge role={player.role} small />
+                                    <RosterStatusBadge isActive={false} />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="opgg-cell-rank">
+                                {player.error ? (
+                                  <span className="player-error">{player.error}</span>
+                                ) : (
+                                  <OpggRankCell
+                                    tier={player.tier}
+                                    rank={player.rank}
+                                    leaguePoints={player.leaguePoints}
+                                  />
+                                )}
+                              </div>
+
+                              <div className="opgg-cell-winrate">
+                                <WinratePills wins={player.wins} losses={player.losses} />
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : null}
 
                       {team.opggUrl ? (
                         <a

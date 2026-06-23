@@ -11,12 +11,17 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "opgg-static.akamaized.net",
-        pathname: "/images/medals_new/**",
+        pathname: "/images/**",
       },
       {
         protocol: "https",
         hostname: "ddragon.leagueoflegends.com",
         pathname: "/cdn/**",
+      },
+      {
+        protocol: "https",
+        hostname: "raw.communitydragon.org",
+        pathname: "/**",
       },
     ],
   },
